@@ -489,6 +489,10 @@ class AttachBridge:
         self._consume_turn_end()                 # drop any stale end-marker from a prior turn
         now = time.monotonic()
         self._turn_active.set()
+        # This turn was initiated by Telegram. Codex versions differ in whether they persist
+        # the injected user message in the rollout, so outbound routing must not depend on a
+        # transcript user event being present.
+        self._turn_from_tg = True
         self._last_activity = now
         self._turn_started = now
         self._typing_count = 1
@@ -674,6 +678,7 @@ class AttachBridge:
             log.info("TURN END t=%.2f dur=%.1fs typing_fired=%d max_gap=%.2fs",
                      time.time(), time.monotonic() - self._turn_started,
                      self._typing_count, self._max_gap)
+        self._turn_from_tg = False
 
     def _end_turn(self) -> None:
         # Claude Stop-hook path: catch anything written just before the hook fired, then finish.

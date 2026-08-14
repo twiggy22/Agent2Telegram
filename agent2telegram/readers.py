@@ -182,6 +182,26 @@ class CodexReader:
                 ts = rec.get("timestamp", "")
                 yield Ev("text", text=msg, key=f"{ts}:{_hash(msg)}",
                          final=(p.get("phase") == "final_answer"))
+        elif t == "response_item" and pt == "message":
+            # Newer Codex rollouts store visible messages as response_item/message rather
+            # than event_msg/user_message or event_msg/agent_message.
+            role = p.get("role")
+            blocks = p.get("content") if isinstance(p.get("content"), list) else []
+            parts = []
+            for block in blocks:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") in ("input_text", "output_text") and block.get("text"):
+                    parts.append(str(block["text"]))
+            msg = "\n".join(parts).strip()
+            if not msg:
+                return
+            if role == "user":
+                yield Ev("user", text=msg)
+            elif role == "assistant":
+                ts = rec.get("timestamp", "")
+                yield Ev("text", text=msg, key=f"{ts}:{_hash(msg)}",
+                         final=(p.get("phase") == "final_answer"))
         elif t == "response_item" and pt in ("function_call", "custom_tool_call", "web_search_call"):
             if pt == "web_search_call":
                 action = p.get("action") if isinstance(p.get("action"), dict) else {}
