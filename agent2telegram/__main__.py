@@ -31,6 +31,12 @@ def _cmd_run(args) -> int:
     except ConfigError as e:
         print(f"✗ {e}", file=sys.stderr)
         return 2
+    from .instance_lock import acquire, InstanceAlreadyRunning
+    try:
+        _instance_lock = acquire()
+    except InstanceAlreadyRunning as e:
+        print(f"✗ {e}", file=sys.stderr)
+        return 1
     # Fill in the bot @username (non-secret) on startup if missing, so other tools (e.g. the
     # Agents Monitoring dashboard's Telegram link) can use it. Self-heals older configs on restart.
     if not cfg.bot_username:
